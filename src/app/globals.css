@@ -1,0 +1,285 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #F5EFE4;
+  --color-cream-text: #F7F0E4;
+  --color-cream-muted: #E8DECE;
+  --color-espresso: #1C120C;
+  --color-espresso-alt: #2A1B12;
+  --color-espresso-card: #23160F;
+  --color-orange: #E8542A;
+  --color-orange-hover: #FF6A3D;
+  --color-orange-glow: rgba(232, 84, 42, 0.35);
+  --color-gold: #F2B33D;
+  --color-gold-hover: #FFC93C;
+  --color-charcoal-text: #241B14;
+  --color-muted-text: #8A7F72;
+  --color-muted-light: #A39686;
+  --color-spicy-red: #C1121F;
+  --color-glass-dark: rgba(28, 18, 12, 0.75);
+  --color-glass-light: rgba(245, 239, 228, 0.85);
+
+  --font-display: var(--font-display), Fraunces, Georgia, serif;
+  --font-mono: var(--font-mono), "IBM Plex Mono", monospace;
+  --font-body: var(--font-body), Inter, system-ui, sans-serif;
+}
+
+:root {
+  --cream: #F5EFE4;
+  --cream-text: #F7F0E4;
+  --espresso: #1C120C;
+  --espresso-alt: #2A1B12;
+  --orange: #E8542A;
+  --orange-hover: #FF6A3D;
+  --gold: #F2B33D;
+  --charcoal-text: #241B14;
+  --muted-text: #8A7F72;
+
+  /* Elevation (shadow) language — subtle / card, medium / dropdown, strong / modal */
+  --elev-1: 0 2px 6px -2px rgba(28, 18, 12, 0.14), 0 1px 2px -1px rgba(28, 18, 12, 0.1);
+  --elev-2: 0 12px 28px -12px rgba(28, 18, 12, 0.28), 0 4px 10px -6px rgba(28, 18, 12, 0.16);
+  --elev-3: 0 28px 60px -18px rgba(28, 18, 12, 0.55), 0 10px 24px -12px rgba(28, 18, 12, 0.3);
+
+  /* Warm accent glow used for hovers/focus on dark surfaces */
+  --glow-orange: 0 0 0 1px rgba(232, 84, 42, 0.35), 0 8px 24px -6px rgba(232, 84, 42, 0.45);
+
+  /* Micro-interaction timing */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: var(--espresso);
+    color: var(--cream-text);
+  }
+
+  body {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Consistent warm color-grade across every photograph site-wide */
+  img {
+    filter: saturate(1.05) contrast(1.04) sepia(0.06) brightness(1.02);
+  }
+
+  ::selection {
+    background-color: var(--orange);
+    color: var(--cream);
+  }
+
+  /* On-brand focus ring (orange glow) instead of default blue — outline only, no resize */
+  :focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 2px;
+    border-radius: 4px;
+    box-shadow: 0 0 0 4px rgba(232, 84, 42, 0.18);
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #1C120C;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #E8542A;
+    border-radius: 9999px;
+    border: 2px solid #1C120C;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #FF6A3D;
+  }
+}
+
+/* Glassmorphism and specialized utilities */
+.glass-espresso {
+  background: rgba(28, 18, 12, 0.78);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(242, 179, 61, 0.15);
+}
+
+.glass-cream {
+  background: rgba(245, 239, 228, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(28, 18, 12, 0.12);
+}
+
+.glass-card-dark {
+  background: rgba(42, 27, 18, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.glass-card-dark:hover {
+  border-color: rgba(232, 84, 42, 0.4);
+  box-shadow: 0 25px 50px -12px rgba(232, 84, 42, 0.25), inset 0 1px 0 rgba(242, 179, 61, 0.3);
+}
+
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(28, 18, 12, 0.08);
+  box-shadow: 0 16px 32px -10px rgba(28, 18, 12, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Whisper of film grain for premium cinematic texture (texture layer only) */
+.grain {
+  position: relative;
+}
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  opacity: 0.028;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Consistent warm color-grade so photos look like one shoot (does not alter crop/size) */
+.warm-grade {
+  filter: saturate(1.05) contrast(1.04) sepia(0.06) brightness(1.02);
+}
+
+/* Glossy inner catch-light highlight (top-left radial light spot) */
+.inner-catchlight {
+  position: relative;
+}
+.inner-catchlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    90% 100% at 25% 0%,
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0) 55%
+  );
+  mix-blend-mode: screen;
+}
+
+/* Soft top-edge inner highlight to fake a glossy catch-light on surfaces */
+.top-catchlight {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Skeleton shimmer for menu loading states */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.02) 40%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.02) 60%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+.text-stroke-orange {
+  -webkit-text-stroke: 1.5px #E8542A;
+  color: transparent;
+}
+
+.text-stroke-gold {
+  -webkit-text-stroke: 1.5px #F2B33D;
+  color: transparent;
+}
+
+.text-stroke-cream {
+  -webkit-text-stroke: 1.5px #F5EFE4;
+  color: transparent;
+}
+
+.font-display {
+  font-family: var(--font-display), Fraunces, Georgia, serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+}
+
+.font-body {
+  font-family: var(--font-body), Inter, system-ui, sans-serif;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover,
+.animate-marquee:focus-within {
+  animation-play-state: paused;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.map-branded {
+  filter: sepia(0.5) saturate(0.85) hue-rotate(-10deg) contrast(0.94) brightness(1.04);
+}
+
+.text-shadow-soft {
+  text-shadow: 0 1px 3px rgba(28, 18, 12, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-pulse-glow,
+  .animate-pulse,
+  .skeleton-shimmer {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.08); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}

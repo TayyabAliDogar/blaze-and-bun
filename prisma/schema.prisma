@@ -1,0 +1,407 @@
+// Blaze & Bun — Prisma schema (Phase 1: Database & Data Model)
+// Provider: PostgreSQL. URLs configured in prisma.config.ts / .env.local.
+// Soft-deletes + multi-currency isolation enforced per master prompt.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  customer
+  staff
+  admin
+}
+
+enum OrderStatus {
+  pending
+  received
+  preparing
+  ready
+  completed
+  cancelled
+}
+
+enum PaymentStatus {
+  unpaid
+  paid
+  refunded
+  failed
+}
+
+enum ReviewSource {
+  internal
+  google
+}
+
+enum DeliveryType {
+  pickup
+  delivery
+}
+
+enum PaymentMethod {
+  card
+  googlepay
+  applepay
+  cod
+}
+
+enum DiscountType {
+  percent
+  fixed
+}
+
+enum StatusChangeSource {
+  system
+  customer
+  staff
+  admin
+  payment
+}
+
+// ---------------------------------------------------------------------------
+// 1. users
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String?
+  hashedPassword String
+  role          Role      @default(customer)
+  emailVerified Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  orders      Order[]
+  reviews     Review[]
+  auditLogs   AdminAuditLog[] @relation("AuditActor")
+  sessions    Session[]
+  passwordResetTokens PasswordResetToken[]
+  promoRedemptions PromoRedemption[]
+}
+
+// ---------------------------------------------------------------------------
+// 1b. sessions (refresh-token rotation / revocation for auth)
+// ---------------------------------------------------------------------------
+
+model Session {
+  id          String    @id @default(cuid())
+  userId      String
+  refreshHash String    @unique
+  expiresAt   DateTime
+  ipAddress   String?
+  userAgent   String?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// 1c. password_reset_tokens (one-time, short-lived password reset)
+// ---------------------------------------------------------------------------
+
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// 2. branches
+// ---------------------------------------------------------------------------
+
+model Branch {
+  id              String   @id @default(cuid())
+  name            String
+  address         String
+  city            String
+  country         String
+  currencyCode    String   @default("USD")
+  lat             Float
+  lng             Float
+  phone           String?
+  timezone        String   @default("America/New_York")
+  openingHours    String
+  schedule        Json     @default("{}")
+  deliveryRadiusKm Float  @default(8)
+  isDefault       Boolean  @default(false)
+  isFeatured      Boolean  @default(false)
+  parking         String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  menuItemPrices MenuItemPrice[]
+  orders          Order[]
+  reviews         Review[]
+  promoCodes      PromoCode[]
+
+  @@index([lat, lng])
+  @@index([isActive])
+}
+
+// ---------------------------------------------------------------------------
+// 3. menu_categories
+// ---------------------------------------------------------------------------
+
+model MenuCategory {
+  id           String   @id @default(cuid())
+  name         String
+  displayOrder Int      @default(0)
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  menuItems MenuItem[]
+
+  @@index([isDeleted, displayOrder])
+}
+
+// ---------------------------------------------------------------------------
+// 4. menu_items
+// ---------------------------------------------------------------------------
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  categoryId  String
+  name        String
+  description String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  category  MenuCategory       @relation(fields: [categoryId], references: [id])
+  prices    MenuItemPrice[]
+  orderItems OrderItem[]
+
+  @@index([categoryId])
+  @@index([isActive, isDeleted])
+}
+
+// ---------------------------------------------------------------------------
+// 5. menu_item_prices (per-branch currency/price isolation)
+// ---------------------------------------------------------------------------
+
+model MenuItemPrice {
+  id           String   @id @default(cuid())
+  itemId       String
+  branchId     String
+  price        Decimal  @db.Decimal(10, 2)
+  isOutOfStock Boolean  @default(false)
+
+  item   MenuItem @relation(fields: [itemId], references: [id])
+  branch Branch   @relation(fields: [branchId], references: [id])
+
+  @@unique([itemId, branchId])
+  @@index([branchId])
+}
+
+// ---------------------------------------------------------------------------
+// 6. orders
+// ---------------------------------------------------------------------------
+
+model Order {
+  id                     String        @id @default(cuid())
+  userId                 String?
+  branchId               String
+  guestName              String?
+  guestEmail             String?
+  guestPhone             String?
+  deliveryAddress        String?
+  deliveryNotes          String?
+  deliveryType           DeliveryType  @default(delivery)
+  status                 OrderStatus   @default(pending)
+  subtotal               Decimal       @db.Decimal(10, 2)
+  tax                    Decimal       @db.Decimal(10, 2) @default(0)
+  deliveryFee            Decimal       @db.Decimal(10, 2) @default(0)
+  discount               Decimal       @db.Decimal(10, 2) @default(0)
+  total                  Decimal       @db.Decimal(10, 2)
+  currencyCode           String        @default("USD")
+  paymentMethod          PaymentMethod?
+  paymentStatus          PaymentStatus @default(unpaid)
+  stripePaymentIntentId  String?
+  promoCodeId            String?
+  etaMinutes             Int?
+  guestAccessTokenHash   String?
+  createdAt              DateTime      @default(now())
+
+  user        User?            @relation(fields: [userId], references: [id])
+  branch      Branch           @relation(fields: [branchId], references: [id])
+  promoCode   PromoCode?       @relation(fields: [promoCodeId], references: [id])
+  redemption  PromoRedemption?
+  items       OrderItem[]
+  statusLogs  OrderStatusLog[]
+  paymentEvents PaymentEvent[]
+  reviews     Review[]
+
+  @@index([userId])
+  @@index([branchId, status])
+  @@index([createdAt])
+  @@index([guestEmail])
+}
+
+// ---------------------------------------------------------------------------
+// 6b. promo_codes (marketing/promotion engine for checkout)
+// ---------------------------------------------------------------------------
+
+model PromoCode {
+  id             String       @id @default(cuid())
+  code           String       @unique
+  description    String
+  discountType   DiscountType
+  discountValue  Decimal      @db.Decimal(10, 2)
+  maxDiscount    Decimal?     @db.Decimal(10, 2)
+  minOrderAmount Decimal      @db.Decimal(10, 2) @default(0)
+  branchId       String?
+  startsAt       DateTime?
+  expiresAt      DateTime?
+  usageLimit     Int?
+  usedCount      Int          @default(0)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  branch       Branch?          @relation(fields: [branchId], references: [id])
+  orders       Order[]
+  redemptions  PromoRedemption[]
+
+  @@index([code])
+  @@index([branchId])
+  @@index([isActive, expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// 6c. promo_redemptions (one per order; per-user/per-email usage tracking)
+// ---------------------------------------------------------------------------
+
+model PromoRedemption {
+  id          String   @id @default(cuid())
+  promoCodeId String
+  orderId     String   @unique
+  userId      String?
+  email       String?
+  createdAt   DateTime @default(now())
+
+  promoCode PromoCode @relation(fields: [promoCodeId], references: [id])
+  order     Order     @relation(fields: [orderId], references: [id])
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@index([promoCodeId, email])
+  @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// 6d. order_status_logs (immutable order lifecycle audit trail)
+// ---------------------------------------------------------------------------
+
+model OrderStatusLog {
+  id         String              @id @default(cuid())
+  orderId    String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  source     StatusChangeSource  @default(system)
+  note       String?
+  createdAt  DateTime            @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// 6e. payment_events (idempotency ledger for inbound webhooks)
+// ---------------------------------------------------------------------------
+
+model PaymentEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  orderId     String?
+  provider    String
+  eventType   String?
+  payload     Json
+  processedAt DateTime @default(now())
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+}
+
+// ---------------------------------------------------------------------------
+// 7. order_items
+// ---------------------------------------------------------------------------
+
+model OrderItem {
+  id                      String   @id @default(cuid())
+  orderId                 String
+  menuItemId              String
+  customizationSnapshotJson Json?
+  quantity                Int      @default(1)
+  unitPrice               Decimal  @db.Decimal(10, 2)
+
+  order    Order    @relation(fields: [orderId], references: [id])
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@index([menuItemId])
+}
+
+// ---------------------------------------------------------------------------
+// 8. reviews
+// ---------------------------------------------------------------------------
+
+model Review {
+  id        String       @id @default(cuid())
+  userId    String?
+  branchId  String
+  orderId   String?      @unique
+  rating    Int
+  comment   String?
+  isApproved Boolean      @default(false)
+  source    ReviewSource @default(internal)
+  createdAt DateTime     @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id])
+  branch Branch  @relation(fields: [branchId], references: [id])
+  order  Order?  @relation(fields: [orderId], references: [id])
+
+  @@index([branchId, isApproved])
+}
+
+// ---------------------------------------------------------------------------
+// 9. admin_audit_log
+// ---------------------------------------------------------------------------
+
+model AdminAuditLog {
+  id           String   @id @default(cuid())
+  adminUserId  String
+  action       String
+  targetTable  String
+  targetId     String?
+  ipAddress    String?
+  timestamp    DateTime @default(now())
+
+  adminUser User @relation("AuditActor", fields: [adminUserId], references: [id])
+
+  @@index([adminUserId])
+  @@index([targetTable, targetId])
+  @@index([timestamp])
+}
