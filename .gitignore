@@ -40,7 +40,9 @@ yarn-error.log*
 .env.development.local
 .env.test
 .env.test.local
-!.env.example
+
+# .env.example intentionally NOT committed (kept local only, per user preference)
+.env.example
 
 # vercel
 .vercel
